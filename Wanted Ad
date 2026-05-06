@@ -1,0 +1,71 @@
+@page "/wanted-ads"
+@rendermode InteractiveServer
+@inject ListingService listingService
+@using System.ComponentModel.DataAnnotations
+
+<h3>Wanted Ads</h3>
+
+<EditForm Model="newWantedAd" OnValidSubmit="SubmitWantedAd" FormName="wantedAdForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <label>Book Title:</label>
+    <InputText @bind-Value="newWantedAd.Title" />
+
+    <br /><br />
+
+    <label>Author:</label>
+    <InputText @bind-Value="newWantedAd.Author" />
+
+    <br /><br />
+
+    <label>Module Code:</label>
+    <InputText @bind-Value="newWantedAd.ModuleCode" />
+
+    <br /><br />
+
+    <label>Description:</label>
+    <InputTextArea @bind-Value="newWantedAd.Description" />
+
+    <br /><br />
+
+    <button type="submit">Post Wanted Ad</button>
+</EditForm>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p>@message</p>
+}
+
+<hr />
+
+<h4>Posted Wanted Ads</h4>
+
+@if (listingService.WantedAds.Count == 0)
+{
+    <p>No wanted ads posted yet.</p>
+}
+else
+{
+    @foreach (var ad in listingService.WantedAds)
+    {
+        <div style="border:1px solid black; padding:10px; margin:10px;">
+            <p><strong>Title:</strong> @ad.Title</p>
+            <p><strong>Author:</strong> @ad.Author</p>
+            <p><strong>Module:</strong> @ad.ModuleCode</p>
+            <p><strong>Description:</strong> @ad.Description</p>
+        </div>
+    }
+}
+
+@code {
+    WantedAd newWantedAd = new();
+    string? message;
+
+    void SubmitWantedAd()
+    {
+        listingService.AddWantedAd(newWantedAd);
+        message = "Wanted ad posted successfully!";
+        newWantedAd = new();
+    }
+}
