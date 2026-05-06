@@ -1,0 +1,111 @@
+@page "/offers"
+@rendermode InteractiveServer
+@inject ListingService listingService
+@using System.ComponentModel.DataAnnotations
+
+<h3>Make an Offer</h3>
+
+@if (listingService.Listings.Count == 0)
+{
+    <p>No listings available to make offers on.</p>
+}
+else
+{
+    <EditForm Model="newOffer" OnValidSubmit="SubmitOffer" FormName="offerForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <label>Select Listing:</label>
+        <select @bind="selectedListingTitle">
+            <option value="">-- Select a listing --</option>
+            @foreach (var listing in listingService.Listings)
+            {
+                <option value="@listing.Title">@listing.Title - R @listing.Price</option>
+            }
+        </select>
+
+        <br /><br />
+
+        <label>Offer Amount:</label>
+        <InputNumber @bind-Value="newOffer.OfferAmount" />
+
+        <br /><br />
+
+        <button type="submit">Submit Offer</button>
+    </EditForm>
+}
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p>@message</p>
+}
+
+<hr />
+
+<h3>All Offers</h3>
+
+@if (listingService.Offers.Count == 0)
+{
+    <p>No offers have been made yet.</p>
+}
+else
+{
+    @foreach (var offer in listingService.Offers)
+    {
+        <div style="border:1px solid black;
+                    padding:10px;
+                    margin:10px;">
+
+            <p><strong>Listing:</strong> @offer.ListingTitle</p>
+            <p><strong>Offer:</strong> R @offer.OfferAmount</p>
+            <p><strong>Status:</strong> @offer.Status</p>
+
+            @if (offer.Status == "Pending")
+            {
+                <button @onclick="() => AcceptOffer(offer)">Accept</button>
+                <button @onclick="() => RejectOffer(offer)">Reject</button>
+            }
+        </div>
+    }
+}
+
+@code {
+    Offer newOffer = new();
+    string? selectedListingTitle;
+    string? message;
+
+    void SubmitOffer()
+    {
+        if (string.IsNullOrWhiteSpace(selectedListingTitle))
+        {
+            message = "Select a listing";
+            return;
+        }
+
+        newOffer.ListingTitle = selectedListingTitle;
+        listingService.AddOffer(newOffer);
+
+        message = "Offer submitted";
+        newOffer = new();
+        selectedListingTitle = null;
+    }
+
+    void AcceptOffer(Offer offer)
+    {
+        offer.Status = "Accepted";
+
+        Transaction transaction = new()
+        {
+            ListingTitle = offer.ListingTitle,
+            FinalPrice = offer.OfferAmount,
+            Status = "In Progress"
+        };
+
+        listingService.AddTransaction(transaction);
+    }
+
+    void RejectOffer(Offer offer)
+    {
+        offer.Status = "Rejected";
+    }
+}
