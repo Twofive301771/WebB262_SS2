@@ -1,0 +1,166 @@
+@page "/listings"
+@rendermode InteractiveServer
+@inject ListingService listingService
+
+<h3>Textbook Listings</h3>
+
+@if (listingService.Listings.Count == 0)
+{
+    <p>No listings have been added yet.</p>
+}
+else
+{
+    <input placeholder="Search by title"
+           @bind="searchText"
+           style="margin-bottom:10px;"/>
+
+    <label>Max Price:</label>
+    <input type="number" @bind="maxPrice"/>
+
+    <label>Sort by:</label>
+    <select @bind="sortOption">
+        <option value="">None</option>
+        <option value="low">Price: Low to High</option>
+        <option value="high">Price: High to Low</option>
+    </select>
+
+    @foreach (var item in GetFilteredListings())
+    {
+        <div style="border:1px solid black;
+                    padding:10px;
+                    margin:10px;">
+
+            <h4>@item.Title</h4>
+            <p>Price: R @item.Price</p>
+            <p>Condition: @item.Condition</p>
+
+            <button @onclick="() => StartEdit(item)">Edit</button>
+            <button @onclick="() => ConfirmDelete(item)">Delete</button>"
+        </div>
+    }
+}
+
+@if (itemToEdit != null)
+{
+    <div style="border:1px solid blue; padding:10px; margin-top:20px;">
+        <h4>Edit Listing</h4>
+
+        <label>Title:</label>
+        <input @bind="editTitle"/>
+
+        <br/><br/>
+
+        <label>Price:</label>
+        <input type="number" @bind="editPrice"/>
+
+        <br/><br/>
+
+        <label>Condition:</label>
+        <input @bind="editCondition"/>
+
+        <br /><br />
+
+        <button @onclick="SaveEdit">Save</button>
+        <button @onclick="CancelEdit">Cancel</button>
+    </div>
+}
+
+@if (itemToDelete != null)
+{
+    <div style="border:1px solid red;
+                padding:10px;
+                margin-top:20px;">
+        <p>Are you sure you want to delete this listing?</p>
+
+        <button @onclick="DeleteConfirmed">Yes</button>
+        <button @onclick="CancelDelete">No</button>
+    </div>
+}
+
+@code
+{
+    List<Listing> GetFilteredListings()
+    {
+        var result = listingService.Listings;
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            result = result
+                .Where(item => item.Title != null &&
+                               item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        if (maxPrice.HasValue && maxPrice > 0)
+        {
+            result = result
+                .Where(item => item.Price <= maxPrice)
+                .ToList();
+        }
+
+        if (sortOption == "low")
+        {
+            result = result.OrderBy(item => item.Price).ToList();
+        }
+        else if (sortOption == "high")
+        {
+            result = result.OrderByDescending(item => item.Price).ToList();
+        }
+
+        return result;
+    }
+    string? searchText;
+    decimal? maxPrice;
+    string? sortOption;
+
+    Listing? itemToDelete;
+    Listing? itemToEdit;
+
+    string? editTitle;
+    decimal editPrice;
+    string? editCondition;
+
+    void StartEdit(Listing item)
+    {
+        itemToEdit = item;
+        editTitle = item.Title;
+        editPrice = item.Price;
+        editCondition = item.Condition;
+    }
+
+    void SaveEdit()
+    {
+        if (itemToEdit != null)
+        {
+            itemToEdit.Title = editTitle;
+            itemToEdit.Price = editPrice;
+            itemToEdit.Condition = editCondition;
+
+            itemToEdit = null;
+        }
+    }
+
+    void CancelEdit()
+    {
+        itemToEdit = null;
+    }
+
+    void ConfirmDelete(Listing item)
+    {
+        itemToDelete = item;
+    }
+
+    void DeleteConfirmed()
+    {
+        if (itemToDelete != null)
+        {
+            listingService.Listings.Remove(itemToDelete);
+            itemToDelete = null;
+        }
+    }
+
+    void CancelDelete()
+    {
+        itemToDelete = null;
+    }
+}
