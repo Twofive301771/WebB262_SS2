@@ -1,0 +1,92 @@
+@page "/reviews"
+@rendermode InteractiveServer
+@inject ListingService listingService
+@using System.ComponentModel.DataAnnotations
+
+<h3>Leave a Review</h3>
+
+@if (!listingService.Transactions.Any(t => t.Status == "Completed"))
+{
+    <p>No completed transactions available for review.</p>
+}
+else
+{
+    <EditForm Model="newReview" OnValidSubmit="SubmitReview" FormName="reviewForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <label>Select Completed Transaction:</label>
+        <select @bind="selectedListingTitle">
+            <option value="">-- Select transaction --</option>
+
+            @foreach (var transaction in listingService.Transactions.Where(t => t.Status == "Completed"))
+            {
+                <option value="@transaction.ListingTitle">
+                    @transaction.ListingTitle - R @transaction.FinalPrice
+                </option>
+            }
+        </select>
+
+        <br /><br />
+
+        <label>Rating:</label>
+        <InputNumber @bind-Value="newReview.Rating" />
+
+        <br /><br />
+
+        <label>Comment:</label>
+        <InputTextArea @bind-Value="newReview.Comment" />
+
+        <br /><br />
+
+        <button type="submit">Submit Review</button>
+    </EditForm>
+}
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p>@message</p>
+}
+
+<hr />
+
+<h4>All Reviews</h4>
+
+@if (listingService.Reviews.Count == 0)
+{
+    <p>No reviews yet.</p>
+}
+else
+{
+    @foreach (var review in listingService.Reviews)
+    {
+        <div style="border:1px solid black; padding:10px; margin:10px;">
+            <p><strong>Listing:</strong> @review.ListingTitle</p>
+            <p><strong>Rating:</strong> @review.Rating / 5</p>
+            <p><strong>Comment:</strong> @review.Comment</p>
+            <p><strong>Date:</strong> @review.CreatedAt.ToShortDateString()</p>
+        </div>
+    }
+}
+
+@code {
+    Review newReview = new();
+    string? selectedListingTitle;
+    string? message;
+
+    void SubmitReview()
+    {
+        if (string.IsNullOrWhiteSpace(selectedListingTitle))
+        {
+            message = "Please select a completed transaction.";
+            return;
+        }
+
+        newReview.ListingTitle = selectedListingTitle;
+        listingService.AddReview(newReview);
+
+        message = "Review submitted successfully!";
+        newReview = new();
+        selectedListingTitle = null;
+    }
+}
