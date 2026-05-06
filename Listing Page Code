@@ -1,0 +1,53 @@
+@page "/create-listing"
+@inject ListingService listingService
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+
+<h3>Create Listing</h3>
+
+
+<EditForm Model="newListing" OnValidSubmit="HandleSubmit" FormName="createListingForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Title:</label>
+        <InputText @bind-Value="newListing.Title" />
+    </div>
+
+    <br/>
+
+    <div>
+        <label>Price:</label>
+        <InputNumber @bind-Value="newListing.Price" />
+    </div>
+
+    <br/>
+
+    <div>
+        <label>Condition:</label>
+        <InputText @bind-Value="newListing.Condition" />
+    </div>
+
+    <br />
+
+    <button type="submit">Create Listing</button>
+</EditForm>
+
+@if (message != null)
+{
+    <p>@message</p>
+}
+
+@code {
+    Listing newListing = new();
+
+    string? message;
+
+    void HandleSubmit()
+    {
+        listingService.AddListing(newListing);
+        message = "Listing created";
+        newListing = new();
+    }
+}
