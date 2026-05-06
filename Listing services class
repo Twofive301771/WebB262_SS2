@@ -1,0 +1,72 @@
+using System.ComponentModel.DataAnnotations;
+
+public class ListingService
+{
+    public List<Listing> Listings { get; set; } = new();
+    public List<Offer> Offers { get; set; } = new();
+    public List<Transaction> Transactions { get; set; } = new();
+
+    public void AddListing(Listing listing)
+    {
+        Listings.Add(listing);
+    }
+
+    public void AddOffer(Offer offer)
+    {
+        Offers.Add(offer);
+    }
+
+    public void AddTransaction(Transaction transaction)
+    {
+        Transactions.Add(transaction);
+    }
+    public List<WantedAd> WantedAds { get; set; } = new();
+
+    public void AddWantedAd(WantedAd wantedAd)
+    {
+        WantedAds.Add(wantedAd);
+    }
+}
+
+
+
+public class Listing
+{
+    [Required(ErrorMessage = "Title is required")]
+    public string? Title { get; set; }
+
+    [Range(1, 10000, ErrorMessage = "Price must be between R1 and R10 000")]
+    public decimal Price { get; set; }
+
+    [Required(ErrorMessage = "Condition is required")]
+    public string? Condition { get; set; }
+}
+
+public class Offer
+{
+    public string? ListingTitle { get; set; }
+
+    [Range(1, 10000, ErrorMessage = "Offer amount must be between R1 and R10 000")]
+    public decimal OfferAmount { get; set; }
+
+    public string Status { get; set; } = "Pending";
+}
+
+public class Transaction
+{
+    public string? ListingTitle { get; set; }
+    public decimal FinalPrice { get; set; }
+    public string Status { get; set; } = "In Progress";
+    public DateTime TransactionDate { get; set; } = DateTime.Now;
+}
+public class WantedAd
+{
+    [Required(ErrorMessage = "Title is required")]
+    public string? Title { get; set; }
+
+    public string? Author { get; set; }
+
+    public string? ModuleCode { get; set; }
+
+    public string? Description { get; set; }
+}
