@@ -1,0 +1,37 @@
+@page "/transactions"
+@rendermode InteractiveServer
+@inject ListingService listingService
+
+<h3>Transactions</h3>
+
+@if (listingService.Transactions.Count == 0)
+{
+    <p>No transactions yet.</p>
+}
+else
+{
+    @foreach (var transaction in listingService.Transactions)
+    {
+        <div style="border:1px solid black;
+                    padding:10px;
+                    margin:10px;">
+
+            <p><strong>Listing:</strong> @transaction.ListingTitle</p>
+            <p><strong>Final Price:</strong> R @transaction.FinalPrice</p>
+            <p><strong>Status:</strong> @transaction.Status</p>
+            <p><strong>Date:</strong> @transaction.TransactionDate.ToShortDateString()</p>
+
+            @if (transaction.Status == "In Progress")
+            {
+                <button @onclick="() => MarkComplete(transaction)">Mark Complete</button>
+            }
+        </div>
+    }
+}
+
+@code {
+    void MarkComplete(Transaction transaction)
+    {
+        transaction.Status = "Completed";
+    }
+}
