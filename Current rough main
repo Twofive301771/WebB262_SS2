@@ -1,0 +1,772 @@
+// main with added rough features 
+//creating listing page 
+
+@page "/create-listing"
+@inject ListingService listingService
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+
+<h3>Create Listing</h3>
+
+
+<EditForm Model="newListing" OnValidSubmit="HandleSubmit" FormName="createListingForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div>
+        <label>Title:</label>
+        <InputText @bind-Value="newListing.Title" />
+    </div>
+
+    <br/>
+
+    <div>
+        <label>Price:</label>
+        <InputNumber @bind-Value="newListing.Price" />
+    </div>
+
+    <br/>
+
+    <div>
+        <label>Condition:</label>
+        <InputText @bind-Value="newListing.Condition" />
+    </div>
+
+    <br />
+
+    <button type="submit">Create Listing</button>
+</EditForm>
+
+@if (message != null)
+{
+    <p>@message</p>
+}
+
+@code {
+    Listing newListing = new();
+
+    string? message;
+
+    void HandleSubmit()
+    {
+        listingService.AddListing(newListing);
+        message = "Listing created";
+        newListing = new();
+    }
+}
+
+//Listing Services class
+using System.ComponentModel.DataAnnotations;
+
+public class ListingService
+{
+    public List<Listing> Listings { get; set; } = new();
+    public List<Offer> Offers { get; set; } = new();
+    public List<Transaction> Transactions { get; set; } = new();
+
+    public void AddListing(Listing listing)
+    {
+        Listings.Add(listing);
+    }
+
+    public void AddOffer(Offer offer)
+    {
+        Offers.Add(offer);
+    }
+
+    public void AddTransaction(Transaction transaction)
+    {
+        Transactions.Add(transaction);
+    }
+    public List<WantedAd> WantedAds { get; set; } = new();
+
+    public void AddWantedAd(WantedAd wantedAd)
+    {
+        WantedAds.Add(wantedAd);
+    }
+}
+
+
+
+public class Listing
+{
+    [Required(ErrorMessage = "Title is required")]
+    public string? Title { get; set; }
+
+    [Range(1, 10000, ErrorMessage = "Price must be between R1 and R10 000")]
+    public decimal Price { get; set; }
+
+    [Required(ErrorMessage = "Condition is required")]
+    public string? Condition { get; set; }
+}
+
+public class Offer
+{
+    public string? ListingTitle { get; set; }
+
+    [Range(1, 10000, ErrorMessage = "Offer amount must be between R1 and R10 000")]
+    public decimal OfferAmount { get; set; }
+
+    public string Status { get; set; } = "Pending";
+}
+
+public class Transaction
+{
+    public string? ListingTitle { get; set; }
+    public decimal FinalPrice { get; set; }
+    public string Status { get; set; } = "In Progress";
+    public DateTime TransactionDate { get; set; } = DateTime.Now;
+}
+public class WantedAd
+{
+    [Required(ErrorMessage = "Title is required")]
+    public string? Title { get; set; }
+
+    public string? Author { get; set; }
+
+    public string? ModuleCode { get; set; }
+
+    public string? Description { get; set; }
+}
+//Listing class
+using System.ComponentModel.DataAnnotations;
+
+public class Listing
+{
+    public int ListingID { get; set; }
+
+    public int TextbookID { get; set; }
+    public Textbook Textbook { get; set; } = null!;
+
+    public string SellerID { get; set; } = string.Empty;
+    public ApplicationUser Seller { get; set; } = null!;
+
+    [Required]
+    public string Title { get; set; } = string.Empty;
+    [Required]
+    public string Author { get; set; } = string.Empty;
+
+    public string? ISBN { get; set; }
+    public string? Subject { get; set; }
+
+    [Required]
+    public string Condition { get; set; } = string.Empty;
+
+    [Range(1, 10000)]
+    public decimal Price { get; set; }
+
+    [Required]
+    public string Campus { get; set; } = string.Empty;
+
+    public string? ImageUrl { get; set; }
+
+    public string Status { get; set; } = "Available";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // Navigation
+    public ICollection<Offer> Offers { get; set; } = new List<Offer>();
+    public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public ICollection<SavedListing> SavedByUsers { get; set; } = new List<SavedListing>();
+}
+//Listing page
+@page "/listings"
+@rendermode InteractiveServer
+@inject ListingService listingService
+
+<h3>Textbook Listings</h3>
+
+@if (listingService.Listings.Count == 0)
+{
+    <p>No listings have been added yet.</p>
+}
+else
+{
+    <input placeholder="Search by title"
+           @bind="searchText"
+           style="margin-bottom:10px;"/>
+
+    <label>Max Price:</label>
+    <input type="number" @bind="maxPrice"/>
+
+    <label>Sort by:</label>
+    <select @bind="sortOption">
+        <option value="">None</option>
+        <option value="low">Price: Low to High</option>
+        <option value="high">Price: High to Low</option>
+    </select>
+
+    @foreach (var item in GetFilteredListings())
+    {
+        <div style="border:1px solid black;
+                    padding:10px;
+                    margin:10px;">
+
+            <h4>@item.Title</h4>
+            <p>Price: R @item.Price</p>
+            <p>Condition: @item.Condition</p>
+
+            <button @onclick="() => StartEdit(item)">Edit</button>
+            <button @onclick="() => ConfirmDelete(item)">Delete</button>"
+        </div>
+    }
+}
+
+@if (itemToEdit != null)
+{
+    <div style="border:1px solid blue; padding:10px; margin-top:20px;">
+        <h4>Edit Listing</h4>
+
+        <label>Title:</label>
+        <input @bind="editTitle"/>
+
+        <br/><br/>
+
+        <label>Price:</label>
+        <input type="number" @bind="editPrice"/>
+
+        <br/><br/>
+
+        <label>Condition:</label>
+        <input @bind="editCondition"/>
+
+        <br /><br />
+
+        <button @onclick="SaveEdit">Save</button>
+        <button @onclick="CancelEdit">Cancel</button>
+    </div>
+}
+
+@if (itemToDelete != null)
+{
+    <div style="border:1px solid red;
+                padding:10px;
+                margin-top:20px;">
+        <p>Are you sure you want to delete this listing?</p>
+
+        <button @onclick="DeleteConfirmed">Yes</button>
+        <button @onclick="CancelDelete">No</button>
+    </div>
+}
+
+@code
+{
+    List<Listing> GetFilteredListings()
+    {
+        var result = listingService.Listings;
+
+        if (!string.IsNullOrWhiteSpace(searchText))
+        {
+            result = result
+                .Where(item => item.Title != null &&
+                               item.Title.Contains(searchText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+
+        if (maxPrice.HasValue && maxPrice > 0)
+        {
+            result = result
+                .Where(item => item.Price <= maxPrice)
+                .ToList();
+        }
+
+        if (sortOption == "low")
+        {
+            result = result.OrderBy(item => item.Price).ToList();
+        }
+        else if (sortOption == "high")
+        {
+            result = result.OrderByDescending(item => item.Price).ToList();
+        }
+
+        return result;
+    }
+    string? searchText;
+    decimal? maxPrice;
+    string? sortOption;
+
+    Listing? itemToDelete;
+    Listing? itemToEdit;
+
+    string? editTitle;
+    decimal editPrice;
+    string? editCondition;
+
+    void StartEdit(Listing item)
+    {
+        itemToEdit = item;
+        editTitle = item.Title;
+        editPrice = item.Price;
+        editCondition = item.Condition;
+    }
+
+    void SaveEdit()
+    {
+        if (itemToEdit != null)
+        {
+            itemToEdit.Title = editTitle;
+            itemToEdit.Price = editPrice;
+            itemToEdit.Condition = editCondition;
+
+            itemToEdit = null;
+        }
+    }
+
+    void CancelEdit()
+    {
+        itemToEdit = null;
+    }
+
+    void ConfirmDelete(Listing item)
+    {
+        itemToDelete = item;
+    }
+
+    void DeleteConfirmed()
+    {
+        if (itemToDelete != null)
+        {
+            listingService.Listings.Remove(itemToDelete);
+            itemToDelete = null;
+        }
+    }
+
+    void CancelDelete()
+    {
+        itemToDelete = null;
+    }
+}
+
+//Dashboard page:
+@page "/dashboard"
+@rendermode InteractiveServer
+@inject ListingService listingService
+
+<h3>My Dashboard</h3>
+
+<h4>My Listings</h4>
+@if (listingService.Listings.Count == 0)
+{
+    <p>No listings yet.</p>
+}
+else
+{
+    @foreach (var listing in listingService.Listings)
+    {
+        <div style="border:1px solid black; padding:10px; margin:10px;">
+            <p><strong>Title:</strong> @listing.Title</p>
+            <p><strong>Price:</strong> R @listing.Price</p>
+            <p><strong>Condition:</strong> @listing.Condition</p>
+        </div>
+    }
+}
+
+<hr />
+
+<h4>My Offers</h4>
+@if (listingService.Offers.Count == 0)
+{
+    <p>No offers yet.</p>
+}
+else
+{
+    @foreach (var offer in listingService.Offers)
+    {
+        <div style="border:1px solid black; padding:10px; margin:10px;">
+            <p><strong>Listing:</strong> @offer.ListingTitle</p>
+            <p><strong>Offer:</strong> R @offer.OfferAmount</p>
+            <p><strong>Status:</strong> @offer.Status</p>
+        </div>
+    }
+}
+
+<hr />
+
+<h4>My Transactions</h4>
+@if (listingService.Transactions.Count == 0)
+{
+    <p>No transactions yet.</p>
+}
+else
+{
+    @foreach (var transaction in listingService.Transactions)
+    {
+        <div style="border:1px solid black; padding:10px; margin:10px;">
+            <p><strong>Listing:</strong> @transaction.ListingTitle</p>
+            <p><strong>Final Price:</strong> R @transaction.FinalPrice</p>
+            <p><strong>Status:</strong> @transaction.Status</p>
+        </div>
+    }
+}
+
+<hr />
+
+<h4>My Reviews</h4>
+<p>No reviews yet.</p>
+
+//Offers page
+@page "/offers"
+@rendermode InteractiveServer
+@inject ListingService listingService
+@using System.ComponentModel.DataAnnotations
+
+<h3>Make an Offer</h3>
+
+@if (listingService.Listings.Count == 0)
+{
+    <p>No listings available to make offers on.</p>
+}
+else
+{
+    <EditForm Model="newOffer" OnValidSubmit="SubmitOffer" FormName="offerForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <label>Select Listing:</label>
+        <select @bind="selectedListingTitle">
+            <option value="">-- Select a listing --</option>
+            @foreach (var listing in listingService.Listings)
+            {
+                <option value="@listing.Title">@listing.Title - R @listing.Price</option>
+            }
+        </select>
+
+        <br /><br />
+
+        <label>Offer Amount:</label>
+        <InputNumber @bind-Value="newOffer.OfferAmount" />
+
+        <br /><br />
+
+        <button type="submit">Submit Offer</button>
+    </EditForm>
+}
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p>@message</p>
+}
+
+<hr />
+
+<h3>All Offers</h3>
+
+@if (listingService.Offers.Count == 0)
+{
+    <p>No offers have been made yet.</p>
+}
+else
+{
+    @foreach (var offer in listingService.Offers)
+    {
+        <div style="border:1px solid black;
+                    padding:10px;
+                    margin:10px;">
+
+            <p><strong>Listing:</strong> @offer.ListingTitle</p>
+            <p><strong>Offer:</strong> R @offer.OfferAmount</p>
+            <p><strong>Status:</strong> @offer.Status</p>
+
+            @if (offer.Status == "Pending")
+            {
+                <button @onclick="() => AcceptOffer(offer)">Accept</button>
+                <button @onclick="() => RejectOffer(offer)">Reject</button>
+            }
+        </div>
+    }
+}
+
+@code {
+    Offer newOffer = new();
+    string? selectedListingTitle;
+    string? message;
+
+    void SubmitOffer()
+    {
+        if (string.IsNullOrWhiteSpace(selectedListingTitle))
+        {
+            message = "Select a listing";
+            return;
+        }
+
+        newOffer.ListingTitle = selectedListingTitle;
+        listingService.AddOffer(newOffer);
+
+        message = "Offer submitted";
+        newOffer = new();
+        selectedListingTitle = null;
+    }
+
+    void AcceptOffer(Offer offer)
+    {
+        offer.Status = "Accepted";
+
+        Transaction transaction = new()
+        {
+            ListingTitle = offer.ListingTitle,
+            FinalPrice = offer.OfferAmount,
+            Status = "In Progress"
+        };
+
+        listingService.AddTransaction(transaction);
+    }
+
+    void RejectOffer(Offer offer)
+    {
+        offer.Status = "Rejected";
+    }
+}
+
+//Reviews page
+@page "/reviews"
+@rendermode InteractiveServer
+@inject ListingService listingService
+@using System.ComponentModel.DataAnnotations
+
+<h3>Leave a Review</h3>
+
+@if (!listingService.Transactions.Any(t => t.Status == "Completed"))
+{
+    <p>No completed transactions available for review.</p>
+}
+else
+{
+    <EditForm Model="newReview" OnValidSubmit="SubmitReview" FormName="reviewForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <label>Select Completed Transaction:</label>
+        <select @bind="selectedListingTitle">
+            <option value="">-- Select transaction --</option>
+
+            @foreach (var transaction in listingService.Transactions.Where(t => t.Status == "Completed"))
+            {
+                <option value="@transaction.ListingTitle">
+                    @transaction.ListingTitle - R @transaction.FinalPrice
+                </option>
+            }
+        </select>
+
+        <br /><br />
+
+        <label>Rating:</label>
+        <InputNumber @bind-Value="newReview.Rating" />
+
+        <br /><br />
+
+        <label>Comment:</label>
+        <InputTextArea @bind-Value="newReview.Comment" />
+
+        <br /><br />
+
+        <button type="submit">Submit Review</button>
+    </EditForm>
+}
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p>@message</p>
+}
+
+<hr />
+
+<h4>All Reviews</h4>
+
+@if (listingService.Reviews.Count == 0)
+{
+    <p>No reviews yet.</p>
+}
+else
+{
+    @foreach (var review in listingService.Reviews)
+    {
+        <div style="border:1px solid black; padding:10px; margin:10px;">
+            <p><strong>Listing:</strong> @review.ListingTitle</p>
+            <p><strong>Rating:</strong> @review.Rating / 5</p>
+            <p><strong>Comment:</strong> @review.Comment</p>
+            <p><strong>Date:</strong> @review.CreatedAt.ToShortDateString()</p>
+        </div>
+    }
+}
+
+@code {
+    Review newReview = new();
+    string? selectedListingTitle;
+    string? message;
+
+    void SubmitReview()
+    {
+        if (string.IsNullOrWhiteSpace(selectedListingTitle))
+        {
+            message = "Please select a completed transaction.";
+            return;
+        }
+
+        newReview.ListingTitle = selectedListingTitle;
+        listingService.AddReview(newReview);
+
+        message = "Review submitted successfully!";
+        newReview = new();
+        selectedListingTitle = null;
+    }
+}
+
+//Transactions page
+@page "/transactions"
+@rendermode InteractiveServer
+@inject ListingService listingService
+
+<h3>Transactions</h3>
+
+@if (listingService.Transactions.Count == 0)
+{
+    <p>No transactions yet.</p>
+}
+else
+{
+    @foreach (var transaction in listingService.Transactions)
+    {
+        <div style="border:1px solid black;
+                    padding:10px;
+                    margin:10px;">
+
+            <p><strong>Listing:</strong> @transaction.ListingTitle</p>
+            <p><strong>Final Price:</strong> R @transaction.FinalPrice</p>
+            <p><strong>Status:</strong> @transaction.Status</p>
+            <p><strong>Date:</strong> @transaction.TransactionDate.ToShortDateString()</p>
+
+            @if (transaction.Status == "In Progress")
+            {
+                <button @onclick="() => MarkComplete(transaction)">Mark Complete</button>
+            }
+        </div>
+    }
+}
+
+@code {
+    void MarkComplete(Transaction transaction)
+    {
+        transaction.Status = "Completed";
+    }
+}
+
+//Wanted ads
+@page "/wanted-ads"
+@rendermode InteractiveServer
+@inject ListingService listingService
+@using System.ComponentModel.DataAnnotations
+
+<h3>Wanted Ads</h3>
+
+<EditForm Model="newWantedAd" OnValidSubmit="SubmitWantedAd" FormName="wantedAdForm">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <label>Book Title:</label>
+    <InputText @bind-Value="newWantedAd.Title" />
+
+    <br /><br />
+
+    <label>Author:</label>
+    <InputText @bind-Value="newWantedAd.Author" />
+
+    <br /><br />
+
+    <label>Module Code:</label>
+    <InputText @bind-Value="newWantedAd.ModuleCode" />
+
+    <br /><br />
+
+    <label>Description:</label>
+    <InputTextArea @bind-Value="newWantedAd.Description" />
+
+    <br /><br />
+
+    <button type="submit">Post Wanted Ad</button>
+</EditForm>
+
+@if (!string.IsNullOrWhiteSpace(message))
+{
+    <p>@message</p>
+}
+
+<hr />
+
+<h4>Posted Wanted Ads</h4>
+
+@if (listingService.WantedAds.Count == 0)
+{
+    <p>No wanted ads posted yet.</p>
+}
+else
+{
+    @foreach (var ad in listingService.WantedAds)
+    {
+        <div style="border:1px solid black; padding:10px; margin:10px;">
+            <p><strong>Title:</strong> @ad.Title</p>
+            <p><strong>Author:</strong> @ad.Author</p>
+            <p><strong>Module:</strong> @ad.ModuleCode</p>
+            <p><strong>Description:</strong> @ad.Description</p>
+        </div>
+    }
+}
+
+@code {
+    WantedAd newWantedAd = new();
+    string? message;
+
+    void SubmitWantedAd()
+    {
+        listingService.AddWantedAd(newWantedAd);
+        message = "Wanted ad posted successfully!";
+        newWantedAd = new();
+    }
+}
+
+//Not found page (this was automatically added)
+@page "/not-found"
+@layout MainLayout
+
+<h3>Not Found</h3>
+<p>Sorry, the content you are looking for does not exist.</p>
+
+//Error page
+@page "/Error"
+@using System.Diagnostics
+
+<PageTitle>Error</PageTitle>
+
+<h1 class="text-danger">Error.</h1>
+<h2 class="text-danger">An error occurred while processing your request.</h2>
+
+@if (ShowRequestId)
+{
+    <p>
+        <strong>Request ID:</strong> <code>@RequestId</code>
+    </p>
+}
+
+<h3>Development Mode</h3>
+<p>
+    Swapping to <strong>Development</strong> environment will display more detailed information about the error that occurred.
+</p>
+<p>
+    <strong>The Development environment shouldn't be enabled for deployed applications.</strong>
+    It can result in displaying sensitive information from exceptions to end users.
+    For local debugging, enable the <strong>Development</strong> environment by setting the <strong>ASPNETCORE_ENVIRONMENT</strong> environment variable to <strong>Development</strong>
+    and restarting the app.
+</p>
+
+@code{
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+    private bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}
+
+
+
