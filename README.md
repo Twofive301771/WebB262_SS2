@@ -11,4 +11,5 @@ Below is the:
 
 ER Diagram 
 
-<img width="918" height="648" alt="image" src="https://github.com/user-attachments/assets/74326042-9d29-4db2-9c7c-89def8dd50fa" />
+<img width="983" height="807" alt="Screenshot 2026-06-12 at 04 22 18" src="https://github.com/user-attachments/assets/85d372e9-a129-4552-989f-ea1a4f86608d" />
+
